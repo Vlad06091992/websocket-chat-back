@@ -12,6 +12,9 @@ const messages = [
     { message: "Hello Dima", id: "23fd32c23", user: { id: "eefw2", name: "Vlad" }}
 ]
 
+const generateId = () => new Date().getMilliseconds().toString()
+
+const usersState = new Map()
 
 
 const server = http.createServer(app);
@@ -30,19 +33,36 @@ app.get('/',cors(),(req, res) => {
 });
 
 
-socketApp.on('connection' ,(connection) => {
-    connection.on("client-message-sent" ,(message) => {
+socketApp.on('connection' ,(socketChannel) => {
+
+    usersState.set(socketChannel, {id:generateId(),name:'Anon'})
+debugger
+    socketChannel.on("client-name-sent" ,(name) => {
+        const user = usersState.get(socketChannel)
+        user.name = name
+debugger
+        socketApp.on('disconnect',()=>{
+            usersState.delete(socketChannel)
+        })
+
+    });
+
+    socketChannel.on("client-message-sent" ,(message) => {
+        debugger
         console.log(message);
-        const messageItem = {message,id:new Date().getMilliseconds().toString(),user: { id: "eefw2", name: "Vlad" }}
+
+        const user = usersState.get(socketChannel)
+debugger
+        const messageItem = {message,id:generateId(),user}
 
         messages.push(messageItem)
         console.log(messages)
 
-        connection.emit('new-message-sent', messageItem)
+        socketChannel.emit('new-message-sent', messageItem)
 
     });
 
-    connection.emit("init-messages-published" ,messages);
+    socketChannel.emit("init-messages-published" ,messages);
 });
 
 
